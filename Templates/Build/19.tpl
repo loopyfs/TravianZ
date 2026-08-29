@@ -48,18 +48,32 @@ $trainlist = $technology->getTrainingList(1);
                     <td>
                         <label><input type="checkbox" name="schedule" value="1" /> <?php echo defined('SCHEDULE_TRAINING') ? SCHEDULE_TRAINING : 'Schedule training'; ?></label>
                     </td>
-                    <td>
+                    <td rowspan="2">
                         <select id="frequency" name="frequency">
                             <option value="minutely">Minutely</option>
                             <option value="hourly">Hourly</option>
                             <option value="daily" selected>Daily</option>
                         </select>
                     </td>
-                    <td></td>
                 </tr>
                 </tbody>
             </table>
             <p><button type="submit" id="btn_train" class="trav_buttons" name="s1" onclick="this.disabled=true;this.form.submit();"><?php echo TRAIN; ?></button></p>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const schedule = document.getElementById('schedule');
+                const frequency = document.getElementById('frequency');
+                const train_btn = document.getElementById('btn_train');
+                function updateFrequencyState() {
+                    start.disabled = schedule.checked;
+                    train_btn.textContent = schedule.checked ? SCHEDULE_TRAINING : TRAIN;
+                }
+                schedule.addEventListener('change', updateFrequencyState);
+                // Set the correct state when the page loads
+                updateFrequencyState();
+            });
+            </script>
         </form>
     <?php else:?>
         <b><?php echo TRAINING_COMMENCE_BARRACKS;?></b><br />
