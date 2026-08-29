@@ -624,7 +624,7 @@ trait DatabaseTroopQueries {
 			    : (in_array($baseUnit, $unitsbytype['expansion']) ? [9, 10, 19, 20, 29, 30, 39, 40, 49, 50, 59, 60, 69, 70, 79, 80, 89, 90]
 			    : (in_array($baseUnit, $unitsbytype['siege']) ? [7, 8, 17, 18, 27, 28, 37, 38, 47, 48, 57, 58, 67, 68, 77, 78, 87, 88]
 			    : (in_array($baseUnit, $unitsbytype['cavalry']) ? [4, 5, 6, 15, 16, 23, 24, 25, 26, 35, 36, 45, 46, 53, 54, 55, 56, 64, 65, 66, 75, 76, 85, 86]
-			    : [1, 2, 3, 11, 12, 13, 14, 21, 22, 31, 32, 33, 34, 41, 42, 43, 44, 51, 52, 61, 62, 63, 71, 72, 73, 74, 81, 82, 83, 84]));
+			    : [1, 2, 3, 11, 12, 13, 14, 21, 22, 31, 32, 33, 34, 41, 42, 43, 44, 51, 52, 61, 62, 63, 71, 72, 73, 74, 81, 82, 83, 84])));
 			foreach($this->getTraining($vid) as $queuedTrain) {
 			    $queuedBase = (int)$queuedTrain['unit'] > 1000 ? (int)$queuedTrain['unit'] - 1000 : (int)$queuedTrain['unit'];
 			    if(in_array($queuedBase, $queuedUnits, true) &&
