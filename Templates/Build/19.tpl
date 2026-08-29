@@ -64,10 +64,8 @@ $trainlist = $technology->getTrainingList(1);
             document.addEventListener('DOMContentLoaded', function () {
                 const schedule = document.getElementById('schedule');
                 const frequency = document.getElementById('frequency');
-                const train_btn = document.getElementById('btn_train');
                 function updateFrequencyState() {
-                    frequency.disabled = schedule.checked;
-                    train_btn.textContent = schedule.checked ? SCHEDULE_TRAINING : TRAIN;
+                    frequency.disabled = !schedule.checked;
                 }
                 schedule.addEventListener('change', updateFrequencyState);
                 // Set the correct state when the page loads
