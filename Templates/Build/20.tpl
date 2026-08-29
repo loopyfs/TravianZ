@@ -47,6 +47,7 @@ $trainlist = $technology->getTrainingList(2);
                 </tbody>
             </table>
             <p><input type="image" id="btn_train" class="dynamic_img" value="ok" name="s1" src="img/x.gif" alt="<?php echo TRAIN; ?>" /></p>
+            <label><input type="checkbox" name="schedule" value="1" /> <?php echo defined('SCHEDULE_TRAINING') ? SCHEDULE_TRAINING : 'Schedule training'; ?></label>
         </form>
     <?php else:?>
         <b><?php echo TRAINING_COMMENCE_STABLE;?></b><br />
@@ -94,6 +95,8 @@ $trainlist = $technology->getTrainingList(2);
             </tbody>
         </table>
     <?php endif;?>
+
+    <?php include("schedule.tpl");?>
 
     <?php include("upgrade.tpl");?>
 </div>

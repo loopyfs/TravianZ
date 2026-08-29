@@ -149,7 +149,7 @@ class Automation {
         
         $methodsArrays = ["culturePoints", "updateHero", "clearDeleting", "buildComplete",
         				  "demolitionComplete", "marketComplete", "researchComplete",
-        				  "trainingComplete", "healingComplete", "starvation", "celebrationComplete", "festivalComplete",
+                            "trainingScheduleComplete", "trainingComplete", "healingComplete", "starvation", "celebrationComplete", "festivalComplete",
         				  "sendUnitsComplete", "loyaltyRegeneration", "sendreinfunitsComplete",
         				  "returnunitsComplete", "sendSettlersComplete", "spawnNatars",
         				  "spawnWWVillages", "spawnWWBuildingPlans", "activateArtifacts",

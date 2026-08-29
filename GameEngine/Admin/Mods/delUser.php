@@ -83,6 +83,7 @@ if ($ids !== '0') {
     $database->query("DELETE FROM " . TB_PREFIX . "tdata WHERE vref IN ($ids)");
     $database->query("DELETE FROM " . TB_PREFIX . "units WHERE vref IN ($ids)");
     $database->query("DELETE FROM " . TB_PREFIX . "training WHERE vref IN ($ids)");
+    $database->query("DELETE FROM " . TB_PREFIX . "schedule WHERE vref IN ($ids)");
     $database->query("DELETE FROM " . TB_PREFIX . "research WHERE vref IN ($ids)");
     $database->query("DELETE FROM " . TB_PREFIX . "demolition WHERE vref IN ($ids)");
     $database->query("DELETE FROM " . TB_PREFIX . "build_log WHERE wid IN ($ids)");

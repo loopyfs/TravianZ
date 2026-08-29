@@ -1862,6 +1862,29 @@ CREATE TABLE IF NOT EXISTS `%PREFIX%training` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `%prefix%schedule`
+--
+
+CREATE TABLE IF NOT EXISTS `%PREFIX%schedule` (
+ `id` int(11) NOT NULL AUTO_INCREMENT,
+ `vref` int(11) NOT NULL,
+ `building` tinyint(3) NOT NULL,
+ `unit` smallint(6) NOT NULL,
+ `amt` int(11) NOT NULL,
+ `created` int(11) NOT NULL,
+ PRIMARY KEY (`id`),
+ KEY `vref_building` (`vref`, `building`),
+ KEY `vref` (`vref`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `%prefix%schedule`
+--
+
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `%prefix%units`
 --
 

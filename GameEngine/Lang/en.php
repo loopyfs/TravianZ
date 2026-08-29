@@ -1213,6 +1213,7 @@ tz_def('INHABITANTS', 'Inhabitants');
 tz_def('COORDINATES', 'Coordinates');
 tz_def('EXPANSION', 'Expansion');
 tz_def('TRAIN', 'Train');
+tz_def('SCHEDULE_TRAINING', 'Schedule training');
 tz_def('DATE', 'Date');
 tz_def('CONQUERED_BY_VILLAGE', 'Villages founded or conquered by this village');
 tz_def('NONE_CONQUERED_BY_VILLAGE', 'No other village has been founded or conquered by this village yet.');

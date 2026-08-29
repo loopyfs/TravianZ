@@ -98,6 +98,7 @@ trait AutomationTraining {
             foreach($trainlist as $train){
                 $vilIDs[$train['vref']] = true;
             }
+
             $vilIDs = array_keys($vilIDs);
             $database->getProfileVillages($vilIDs, 5);
             $database->cacheResourceLevels($vilIDs);
@@ -143,6 +144,34 @@ trait AutomationTraining {
              
                 //Update starvation data
                 $database->addStarvationData($train['vref']);
+            }
+        }
+    }
+
+    /**
+     * Move scheduled batches into the normal training queue. A village lock
+     * makes the resource check and deduction one operation from competing
+     * cron/page requests. The SQL order supplies building priority.
+     */
+    private function trainingScheduleComplete() {
+        global $database, $technology;
+
+        $schedules = $database->getTrainingSchedules();
+        foreach ($schedules as $schedule) {
+            $vref = (int)$schedule['vref'];
+            if (!$database->getTrainingLock($vref)) continue;
+            try {
+                $requested = (int)$schedule['amt'];
+                if ($requested <= 0) continue;
+                $trained = $technology->queueScheduledTraining(
+                    $vref,
+                    (int)$schedule['building'],
+                    (int)$schedule['unit'],
+                    $requested
+                );
+                if ($trained > 0) $database->reduceTrainingSchedule((int)$schedule['id'], $trained);
+            } finally {
+                $database->releaseTrainingLock($vref);
             }
         }
     }

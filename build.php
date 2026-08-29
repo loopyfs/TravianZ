@@ -75,6 +75,17 @@ if(isset($_GET['id']) && ($_GET['id'] < 1 || $_GET['id'] > 40 && ($_GET['id'] ==
 
 $pagestart = $generator->pageLoadTimeStart();
 $alliance->procAlliForm($_POST);
+
+if (isset($_POST['schedule_delete'])) {
+    $scheduleId = filter_var($_POST['schedule_delete'], FILTER_VALIDATE_INT);
+    $returnId = isset($_POST['id']) && ctype_digit((string)$_POST['id']) ? (int)$_POST['id'] : 19;
+    if ($scheduleId !== false && $scheduleId > 0) {
+        $database->deleteTrainingSchedule($scheduleId, (int)$village->wid, (int)$session->uid);
+    }
+    header("Location: build.php?id=" . $returnId);
+    exit;
+}
+
 $technology->procTech($_POST);
 $market->procMarket($_POST);
 

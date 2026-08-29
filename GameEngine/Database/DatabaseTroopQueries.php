@@ -555,6 +555,56 @@ trait DatabaseTroopQueries {
 		return $this->mysqli_fetch_all($result);
 	}
 
+	/**
+	 * Return pending player training schedules.  The optional owner check is
+	 * deliberately performed in SQL so a forged schedule id cannot expose or
+	 * modify another player's village.
+	 */
+	function getTrainingSchedules($vref = 0, $owner = 0) {
+	    list($vref, $owner) = $this->escape_input((int) $vref, (int) $owner);
+	    $where = ($vref > 0 ? "s.vref = $vref" : "1")
+	        . " AND s.building IN (19, 20, 21, 29, 30)";
+	    if ($owner > 0) $where .= " AND v.owner = $owner";
+	    $q = "SELECT s.* FROM " . TB_PREFIX . "schedule s
+	          INNER JOIN " . TB_PREFIX . "vdata v ON v.wref = s.vref
+	          WHERE $where AND s.amt > 0
+	          ORDER BY FIELD(s.building, 19, 20, 21, 29, 30), s.vref, s.id";
+	    $result = mysqli_query($this->dblink, $q);
+	    return $this->mysqli_fetch_all($result);
+	}
+
+	function createTrainingSchedule($vref, $owner, $building, $unit, $amt) {
+	    list($vref, $owner, $building, $unit, $amt) = $this->escape_input(
+	        (int) $vref, (int) $owner, (int) $building, (int) $unit, (int) $amt
+	    );
+	    if ($vref <= 0 || $owner <= 0 || $amt <= 0
+	        || !in_array($building, [19, 20, 21, 29, 30], true)
+	        || $unit < 1 || $unit > 90) return false;
+	    $now = time();
+	    $q = "INSERT INTO " . TB_PREFIX . "schedule
+	          (vref, building, unit, amt, created)
+	          SELECT $vref, $building, $unit, $amt, $now
+	          FROM " . TB_PREFIX . "vdata
+	          WHERE wref = $vref AND owner = $owner
+	          LIMIT 1";
+	    return mysqli_query($this->dblink, $q);
+	}
+
+	function reduceTrainingSchedule($id, $amt) {
+	    list($id, $amt) = $this->escape_input((int) $id, (int) $amt);
+	    if ($id <= 0 || $amt <= 0) return false;
+	    return mysqli_query($this->dblink, "UPDATE " . TB_PREFIX . "schedule
+	        SET amt = amt - $amt WHERE id = $id AND amt >= $amt");
+	}
+
+	function deleteTrainingSchedule($id, $vref, $owner) {
+	    list($id, $vref, $owner) = $this->escape_input((int) $id, (int) $vref, (int) $owner);
+	    if ($id <= 0 || $vref <= 0 || $owner <= 0) return false;
+	    return mysqli_query($this->dblink, "DELETE s FROM " . TB_PREFIX . "schedule s
+	        INNER JOIN " . TB_PREFIX . "vdata v ON v.wref = s.vref
+	        WHERE s.id = $id AND s.vref = $vref AND v.owner = $owner");
+	}
+
 	function trainUnit($vid, $unit, $amt, $pop, $each, $mode) {
 	    list($vid, $unit, $amt, $pop, $each, $mode) = $this->escape_input((int) $vid, (int) $unit, (int) $amt, (int) $pop, (int) $each, $mode);
 
@@ -566,11 +616,20 @@ trait DatabaseTroopQueries {
 			$isGreat = $unit > 1000;
 			$baseUnit = $isGreat ? $unit - 1000 : $unit;
 
-			if($baseUnit == 99) $queued = $technology->getTrainingList(8);
-			elseif(in_array($baseUnit, $unitsbytype['expansion'])) $queued = $technology->getTrainingList(4);
-			elseif(in_array($baseUnit, $unitsbytype['siege'])) $queued = $technology->getTrainingList($isGreat ? 7 : 3);
-			elseif(in_array($baseUnit, $unitsbytype['cavalry'])) $queued = $technology->getTrainingList($isGreat ? 6 : 2);
-			else $queued = $technology->getTrainingList($isGreat ? 5 : 1);
+			// Do not use Technology::getTrainingList() here: automation has no
+			// session village.  Filtering the raw queue by village id also keeps
+			// queue offsets correct when cron schedules training.
+			$queued = [];
+			$queuedUnits = $baseUnit == 99 ? [99]
+			    : (in_array($baseUnit, $unitsbytype['expansion']) ? [9, 10, 19, 20, 29, 30, 39, 40, 49, 50, 59, 60, 69, 70, 79, 80, 89, 90]
+			    : (in_array($baseUnit, $unitsbytype['siege']) ? [7, 8, 17, 18, 27, 28, 37, 38, 47, 48, 57, 58, 67, 68, 77, 78, 87, 88]
+			    : (in_array($baseUnit, $unitsbytype['cavalry']) ? [4, 5, 6, 15, 16, 23, 24, 25, 26, 35, 36, 45, 46, 53, 54, 55, 56, 64, 65, 66, 75, 76, 85, 86]
+			    : [1, 2, 3, 11, 12, 13, 14, 21, 22, 31, 32, 33, 34, 41, 42, 43, 44, 51, 52, 61, 62, 63, 71, 72, 73, 74, 81, 82, 83, 84]));
+			foreach($this->getTraining($vid) as $queuedTrain) {
+			    $queuedBase = (int)$queuedTrain['unit'] > 1000 ? (int)$queuedTrain['unit'] - 1000 : (int)$queuedTrain['unit'];
+			    if(in_array($queuedBase, $queuedUnits, true) &&
+			       ((int)$queuedTrain['unit'] > 1000) == $isGreat) $queued[] = $queuedTrain;
+			}
 		
 			$now = time();
             $uid = $this->getVillageField($vid, "owner");

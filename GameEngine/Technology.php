@@ -466,7 +466,25 @@ class Technology {
 	}
 
 	private function procTrain($post, $great = false) {
-		global $session;
+		global $session, $database, $village;
+
+		if (!empty($post['schedule'])) {
+		    $allowedBuildings = [19, 20, 21, 29, 30];
+		    $fieldId = isset($post['id']) ? (int)$post['id'] : 0;
+		    $currentBuilding = ($fieldId >= 1 && $fieldId <= 40 && isset($village->resarray['f'.$fieldId.'t']))
+		        ? (int)$village->resarray['f'.$fieldId.'t'] : 0;
+		    if (!in_array($currentBuilding, $allowedBuildings, true)) return;
+		    foreach ($post as $key => $value) {
+		        if (strpos($key, 't') !== 0 || !ctype_digit(substr($key, 1))) continue;
+		        $unit = (int)substr($key, 1);
+		        $amt = (int)$value;
+		        if ($amt > 0 && $unit >= 1 && $unit <= 90) {
+		            $database->createTrainingSchedule($village->wid, $database->getVillageField($village->wid, 'owner'), $currentBuilding, $unit, min($amt, 1000000));
+		        }
+		    }
+		    header("Location: build.php?id=" . $fieldId);
+		    exit;
+		}
 			
 		// first of all, check if we're not trying to train chieftain
 		// and settlers together - which we cannot, since that can result
@@ -575,9 +593,61 @@ class Technology {
 				$database->trainUnit($village->wid, $unit + ($great ? 1000 : 0), $amt, ${'u'.$unit}['pop'], $each, 0);
 			}
 		}
+
 		} finally {
 			$database->releaseTrainingLock($village->wid);
 		}
+	}
+
+	/**
+	 * Queue one pending schedule item using the same unit costs and timing as
+	 * the normal training form.  This is called by automation, where no
+	 * session/village object exists.
+	 */
+	public function queueScheduledTraining($vref, $buildingType, $unit, $requested) {
+	    global $database, $unitsbytype;
+	    $vref = (int)$vref; $buildingType = (int)$buildingType;
+	    $unit = (int)$unit; $requested = (int)$requested;
+	    if ($vref <= 0 || $requested <= 0 || !in_array($buildingType, [19, 20, 21, 29, 30], true)) return 0;
+	    $great = in_array($buildingType, [29, 30], true);
+	    $groups = [
+	        19 => $unitsbytype['infantry'], 29 => $unitsbytype['infantry'],
+	        20 => $unitsbytype['cavalry'], 30 => $unitsbytype['cavalry'],
+	        21 => $unitsbytype['siege']
+	    ];
+	    if (!isset($groups[$buildingType]) || !in_array($unit, $groups[$buildingType], true)) return 0;
+	    if (!isset($GLOBALS['u'.$unit])) return 0;
+	    $owner = (int)$database->getVillageField($vref, 'owner');
+	    $ownerData = $owner > 0 ? $database->getUserArray($owner, 1, false) : [];
+	    $tribe = isset($ownerData['tribe']) ? (int)$ownerData['tribe'] : 0;
+	    if ($tribe < 1 || $tribe > 9 || $unit < (($tribe - 1) * 10 + 1) || $unit > ($tribe * 10)) return 0;
+	    if ($unit % 10 !== 1 && !$database->checkIfResearched($vref, $unit, false)) return 0;
+	    if ($database->getFieldLevelInVillage($vref, $buildingType, false) <= 0) return 0;
+
+	    $data = $GLOBALS['u'.$unit'];
+	    $multiplier = $great ? 3 : 1;
+	    $amount = $requested;
+	    $availableResources = [
+	        'wood' => (int)$database->getWoodAvailable($vref, false),
+	        'clay' => (int)$database->getClayAvailable($vref, false),
+	        'iron' => (int)$database->getIronAvailable($vref, false),
+	        'crop' => (int)$database->getCropAvailable($vref, false),
+	    ];
+	    foreach ($availableResources as $resource => $available) {
+	        $cost = (int)$data[$resource] * $multiplier;
+	        if ($cost > 0) $amount = min($amount, (int)floor($available / $cost));
+	    }
+	    if ($amount <= 0) return 0;
+	    $wood = (int)$data['wood'] * $amount * $multiplier;
+	    $clay = (int)$data['clay'] * $amount * $multiplier;
+	    $iron = (int)$data['iron'] * $amount * $multiplier;
+	    $crop = (int)$data['crop'] * $amount * $multiplier;
+	    $each = $this->getTrainingTime($unit, $great, $vref);
+	    if ($database->modifyResource($vref, $wood, $clay, $iron, $crop, 0)) {
+	        $database->trainUnit($vref, $unit + ($great ? 1000 : 0), $amount, (int)$data['pop'], $each, 0);
+	        return $amount;
+	    }
+	    return 0;
 	}
 
 	private function checkTrainingBuilding($unit) {
@@ -600,7 +670,7 @@ class Technology {
 		return true;
 	}
 
-	private function getTrainingTime($unit, $great) {
+	private function getTrainingTime($unit, $great, $scheduledVillage = null) {
 		global $building, ${'u'.$unit}, $bid19, $bid20, $bid21, $bid25, $bid26, $bid29, $bid30, $bid41, $bid44, $bid49;
 		
 		$footies = [1, 2, 3, 11, 12, 13, 14, 21, 22, 31, 32, 33, 34, 41, 42, 43, 44, 51, 52, 61, 62, 63, 71, 72, 73, 74, 81, 82, 83, 84];
@@ -609,25 +679,35 @@ class Technology {
 		$special = [9, 10, 19, 20, 29, 30, 39, 40, 49, 50, 59, 60, 69, 70, 79, 80, 89, 90];
 		$trapper = [99];
 		
+		$level = function($gid) use ($scheduledVillage, $building) {
+		    global $database;
+		    if ($scheduledVillage !== null) {
+		        return $database->getFieldLevelInVillage($scheduledVillage, $gid, false);
+		    }
+		    return $building->getTypeLevel($gid);
+		};
+
 		if(in_array($unit, $footies)) {		    
 			if($great) {
-				$each = round(($bid29[$building->getTypeLevel(29)]['attri'] / 100) * ${'u'.$unit}['time'] / SPEED);
+				$each = round(($bid29[$level(29)]['attri'] / 100) * ${'u'.$unit}['time'] / SPEED);
 			} else {
-				$each = round(($bid19[$building->getTypeLevel(19)]['attri'] / 100) * ${'u'.$unit}['time'] / SPEED);
+				$each = round(($bid19[$level(19)]['attri'] / 100) * ${'u'.$unit}['time'] / SPEED);
 			}
 		}
 		if(in_array($unit, $calvary)) {		    
 			if($great) {
-				$each = round(($bid30[$building->getTypeLevel(30)]['attri'] * ($building->getTypeLevel(41)>=1?(1/$bid41[$building->getTypeLevel(41)]['attri']):1) / 100) * ${'u'.$unit}['time'] / SPEED);
+				$horseLevel = $level(41);
+				$each = round(($bid30[$level(30)]['attri'] * ($horseLevel>=1?(1/$bid41[$horseLevel]['attri']):1) / 100) * ${'u'.$unit}['time'] / SPEED);
 			} else {
-				$each = round(($bid20[$building->getTypeLevel(20)]['attri'] * ($building->getTypeLevel(41)>=1?(1/$bid41[$building->getTypeLevel(41)]['attri']):1) / 100) * ${'u'.$unit}['time'] / SPEED);
+				$horseLevel = $level(41);
+				$each = round(($bid20[$level(20)]['attri'] * ($horseLevel>=1?(1/$bid41[$horseLevel]['attri']):1) / 100) * ${'u'.$unit}['time'] / SPEED);
 			}
 		}
 		if(in_array($unit, $workshop)) {	    
 			if($great) {
-				$each = round(($bid49[$building->getTypeLevel(49)]['attri'] / 100) * ${'u'.$unit}['time'] / SPEED);
+				$each = round(($bid49[$level(49)]['attri'] / 100) * ${'u'.$unit}['time'] / SPEED);
 			} else {
-				$each = round(($bid21[$building->getTypeLevel(21)]['attri'] / 100) * ${'u'.$unit}['time'] / SPEED);
+				$each = round(($bid21[$level(21)]['attri'] / 100) * ${'u'.$unit}['time'] / SPEED);
 			}
 		}
 		if(in_array($unit, $special)) {			    
@@ -660,14 +740,14 @@ class Technology {
 		// vedea jumatate din timp, dar trupele se antrenau in timpul intreg.
 		// Se aplica pe timpul dat de cladire, inaintea bonusurilor de erou si
 		// alianta, exact in ordinea in care sabloanele afisau pana acum.
-		$each = $this->applyArtifactTrainingBonus($each);
+		$each = $this->applyArtifactTrainingBonus($each, $scheduledVillage);
 
-		$each = $this->applyHeroTrainingBonus($each, $unit, $footies, $calvary);
+		$each = $this->applyHeroTrainingBonus($each, $unit, $footies, $calvary, $scheduledVillage);
 
 		// Bonusul de alianta "Recruitment": instruire mai rapida in toate
 		// cladirile de trupe. Se inmulteste cu bonusul eroului, ca in T4 (coiful
 		// mercenarului si bonusul de alianta se cumuleaza multiplicativ).
-		$each = $this->applyAllianceRecruitmentBonus($each);
+		$each = $this->applyAllianceRecruitmentBonus($each, $scheduledVillage);
 
 		return $each;
 	}
@@ -774,15 +854,16 @@ class Technology {
 	}
 
 	/** Procentul dat de coiful echipat al eroului (0 daca nu are). */
-	private function heroTrainingPercent($unit, array $footies, array $calvary) {
+	private function heroTrainingPercent($unit, array $footies, array $calvary, $trainingVillage = null) {
 		global $village, $database;
 
 		if (!class_exists('HeroBattleBonus') || !HeroBattleBonus::enabled()) {
 			return 0;
 		}
 
-		$uid = (isset($village->wid) && $database)
-			? (int) $database->getVillageField($village->wid, 'owner')
+		$trainingWid = $trainingVillage !== null ? (int)$trainingVillage : (isset($village->wid) ? (int)$village->wid : 0);
+		$uid = ($trainingWid > 0 && $database)
+			? (int) $database->getVillageField($trainingWid, 'owner')
 			: 0;
 
 		if ($uid <= 0) {
@@ -847,20 +928,21 @@ class Technology {
 	* fie corect si cand codul ruleaza in alt context (cron, sitter, admin).
 	*/
 
-	private function applyArtifactTrainingBonus($each) {
+	private function applyArtifactTrainingBonus($each, $trainingVillage = null) {
 		global $village, $database;
 
-		if (!$database || !isset($village->wid)) {
+		$trainingWid = $trainingVillage !== null ? (int)$trainingVillage : (isset($village->wid) ? (int)$village->wid : 0);
+		if (!$database || $trainingWid <= 0) {
 			return $each;
 		}
 
-		$uid = (int) $database->getVillageField($village->wid, 'owner');
+		$uid = (int) $database->getVillageField($trainingWid, 'owner');
 
 		if ($uid <= 0) {
 			return $each;
 		}
 
-		$out = (int) $database->getArtifactsValueInfluence($uid, $village->wid, 5, $each);
+		$out = (int) $database->getArtifactsValueInfluence($uid, $trainingWid, 5, $each);
 
 		return $out > 0 ? $out : 1;
 	}
@@ -872,7 +954,7 @@ class Technology {
 	* fie corect si cand codul ruleaza in alt context (cron, sitter).
 	*/
 	
-	private function applyAllianceRecruitmentBonus($each) {
+	private function applyAllianceRecruitmentBonus($each, $trainingVillage = null) {
 		global $village, $database;
 
 		if (!class_exists('AllianceBonus') || !AllianceBonus::enabled()) {
@@ -880,8 +962,9 @@ class Technology {
 		}
 
 		// acelasi mod de a afla proprietarul ca la bonusul de erou de mai jos
-		$owner = (isset($village->wid) && $database)
-			? (int) $database->getVillageField($village->wid, 'owner')
+		$trainingWid = $trainingVillage !== null ? (int)$trainingVillage : (isset($village->wid) ? (int)$village->wid : 0);
+		$owner = ($trainingWid > 0 && $database)
+			? (int) $database->getVillageField($trainingWid, 'owner')
 			: 0;
 
 		if ($owner <= 0) {
@@ -907,7 +990,7 @@ class Technology {
 	* cache per request, si intoarce null cand sistemul T4 e oprit.
 	*/
 
-	private function applyHeroTrainingBonus($each, $unit, array $footies, array $calvary) {
+	private function applyHeroTrainingBonus($each, $unit, array $footies, array $calvary, $trainingVillage = null) {
 		global $village, $database;
 
 		if (!class_exists('HeroBattleBonus') || !HeroBattleBonus::enabled()) {
@@ -918,8 +1001,9 @@ class Technology {
 		// sesiune: asa bonusul e corect si cand un admin lucreaza pe satul
 		// altui jucator (conteaza eroul proprietarului, nu al adminului).
 		// getVillageField e cache-uit per request, deci nu adauga query-uri.
-		$uid = (isset($village->wid) && $database)
-			? (int) $database->getVillageField($village->wid, 'owner')
+		$trainingWid = $trainingVillage !== null ? (int)$trainingVillage : (isset($village->wid) ? (int)$village->wid : 0);
+		$uid = ($trainingWid > 0 && $database)
+			? (int) $database->getVillageField($trainingWid, 'owner')
 			: 0;
 
 		if ($uid <= 0) {
@@ -959,16 +1043,15 @@ class Technology {
 		global $database, $village, $bid36;
 		
 		if($unit % 10 == 0 || $unit % 10 == 9 && $unit != 99) {
-			if($this->maxUnit($unit, $great) < $amt) $amt = 0;
-			else
-			{
+			$amt = min($amt, max(0, (int)$this->maxUnit($unit, $great)));
+			if($amt > 0) {
 		   		$slots = $database->getAvailableExpansionTraining();
-		   		if($unit % 10 == 0 && $slots['settlers'] <= $amt) $amt = $slots['settlers'];
-		   		if($unit % 10 == 9 && $slots['chiefs'] <= $amt) $amt = $slots['chiefs'];
+                if($unit % 10 == 0) $amt = min($amt, (int)$slots['settlers']);
+                if($unit % 10 == 9) $amt = min($amt, (int)$slots['chiefs']);
 			}
 		}else{
 		    if($unit != 99){
-		        if($this->maxUnit($unit, $great) < $amt) $amt = 0;
+		        $amt = min($amt, max(0, (int)$this->maxUnit($unit, $great)));
 		    }else{
 		        $trainlist = $this->getTrainingList(8);
 		        $train_amt = 0;
