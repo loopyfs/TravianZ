@@ -46,7 +46,7 @@ $trainlist = $technology->getTrainingList(1);
                     <?php include("19_train.tpl");?>
                 <tr>
                     <td>
-                        <label><input id="schedule" type="checkbox" name="schedule" value="1" /> <?php echo defined('SCHEDULE_TRAINING') ? SCHEDULE_TRAINING : 'Schedule training'; ?></label>
+                        <label><input type="checkbox" id="schedule" name="schedule" value="1" /> <?php echo defined('SCHEDULE_TRAINING') ? SCHEDULE_TRAINING : 'Schedule training'; ?></label>
                     </td>
                     <td colspan="2">
                         <select id="frequency" name="frequency">
