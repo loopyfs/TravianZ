@@ -44,10 +44,21 @@ $trainlist = $technology->getTrainingList(1);
                 </tr></thead>
                 <tbody>
                     <?php include("19_train.tpl");?>
+                <tr>
+                    <tc>
+                        <label><input type="checkbox" name="schedule" value="1" /> <?php echo defined('SCHEDULE_TRAINING') ? SCHEDULE_TRAINING : 'Schedule training'; ?></label>
+                    </td>
+                    <td>
+                        <select id="frequency" name="frequency">
+                            <option value="minutely">Minutely</option>
+                            <option value="hourly">Hourly</option>
+                            <option value="daily" selected>Daily</option>
+                        </select>
+                    </td>
+                </tr>
                 </tbody>
             </table>
             <p><button type="submit" id="btn_train" class="trav_buttons" name="s1" onclick="this.disabled=true;this.form.submit();"><?php echo TRAIN; ?></button></p>
-            <label><input type="checkbox" name="schedule" value="1" /> <?php echo defined('SCHEDULE_TRAINING') ? SCHEDULE_TRAINING : 'Schedule training'; ?></label>
         </form>
     <?php else:?>
         <b><?php echo TRAINING_COMMENCE_BARRACKS;?></b><br />
