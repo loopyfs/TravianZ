@@ -92,7 +92,6 @@ $trainlist = $technology->getTrainingList(1);
                     </td>
                 </tr>
             <?php endforeach;?>
-                <tr class="next"><td colspan="3"><?php echo UNIT_FINISHED;?> <span id="timer<?php echo ++$session->timer;?>"><?php echo $NextFinished;?></span></td></tr>
             </tbody>
         </table>
     <?php endif;?>
