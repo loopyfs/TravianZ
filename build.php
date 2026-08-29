@@ -141,7 +141,13 @@ if ($session->goldclub == 1 && count($session->villages) > 1) {
             $timestamp = strtotime("-$hour hours -$second second -$minute minutes +$day day");
             
             if ($totalres > 0 && $_POST['tvillage'] != $village->wid && in_array($_POST['tvillage'], $session->villages) && ($_POST['start'] >= 0 && $_POST['start'] <= 23) && ($_POST['deliveries'] >= 1 && $_POST['deliveries'] <= 3)) {
-                $database->createTradeRoute($session->uid, $_POST['tvillage'], $village->wid, $_POST['r1'], $_POST['r2'], $_POST['r3'], $_POST['r4'], $_POST['start'], $_POST['deliveries'], $reqMerc, $timestamp);
+                if (isset($_POST['hourly']) && $_POST['hourly'] == 'hourly') {
+                    for ($startHour = 0; $startHour < 24; $startHour++) {
+                        $database->createTradeRoute($session->uid, $_POST['tvillage'], $village->wid, $_POST['r1'], $_POST['r2'], $_POST['r3'], $_POST['r4'], $startHour, $_POST['deliveries'], $reqMerc, $timestamp);
+                    }
+                } else {
+                    $database->createTradeRoute($session->uid, $_POST['tvillage'], $village->wid, $_POST['r1'], $_POST['r2'], $_POST['r3'], $_POST['r4'], $_POST['start'], $_POST['deliveries'], $reqMerc, $timestamp);
+                }
                 $route = 1;
                 header("Location: build.php?gid=17&t=4");
                 exit;

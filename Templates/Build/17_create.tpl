@@ -64,7 +64,7 @@ $firstSelect = ($villages[0]?? 0) == $village->wid? 1 : 0;
                 <tr>
                     <th><?php echo START_TIME_TRADE;?>:</th>
                     <td>
-                        <select name="start">
+                        <select name="start" id="start">
                             <?php for ($h = 0; $h < 24; $h++):?>
                                 <option value="<?php echo $h;?>" <?php if($h===0) echo 'selected';?>><?php echo str_pad($h,2,'0',STR_PAD_LEFT);?></option>
                             <?php endfor;?>
@@ -82,6 +82,12 @@ $firstSelect = ($villages[0]?? 0) == $village->wid? 1 : 0;
                     </td>
                 </tr>
                 <tr>
+                    <th><?php echo HOURLY;?>:</th>
+                    <td>
+                        <input type="checkbox" id="hourly" name="hourly" value="hourly">
+                    </td>
+                </tr>
+                <tr>
                     <th><?php echo COSTS;?>:</th>
                     <td><img src="../../<?php echo GP_LOCATE;?>img/a/gold.gif" alt="<?php echo GOLD; ?>" title="<?php echo GOLD;?>"> <b>2</b></td>
                 </tr>
@@ -93,4 +99,16 @@ $firstSelect = ($villages[0]?? 0) == $village->wid? 1 : 0;
         </table>
     </div></div>
     <p><input type="image" value="1" name="save" id="btn_save" class="dynamic_img" src="img/x.gif" tabindex="8" alt="OK"/></p>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const hourly = document.getElementById('hourly');
+        const start = document.getElementById('start');
+        function updateStartState() {
+            start.disabled = hourly.checked;
+        }
+        hourly.addEventListener('change', updateStartState);
+        // Set the correct state when the page loads
+        updateStartState();
+    });
+    </script>
 </form>

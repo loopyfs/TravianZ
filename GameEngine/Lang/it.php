@@ -915,6 +915,7 @@ tz_def("EDIT","Modificare");
 tz_def("EXTEND_TRADE_ROUTES","Estendi la rotta commerciale di <b>7</b> giorni per");
 tz_def("CREATE_TRADE_ROUTES","Crea una nuova rotta commerciale");
 tz_def("DELIVERIES","Consegne");
+tz_def("Hourly","Hourly"); # translation needed
 tz_def("START_TIME_TRADE","Ora di inizio");
 tz_def("CREATE_TRADE_ROUTE","Crea rotta commerciale");
 tz_def("TARGET_VILLAGE","Villaggio bersaglio");

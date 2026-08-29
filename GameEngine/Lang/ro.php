@@ -1091,6 +1091,7 @@ tz_def('EDIT', 'Editează');
 tz_def('EXTEND_TRADE_ROUTES', 'Prelungește ruta comercială cu <b>7</b> zile pentru');
 tz_def('CREATE_TRADE_ROUTES', 'Creează rută comercială nouă');
 tz_def('DELIVERIES', 'Livrări');
+tz_def('DELIVERIES', 'Hourly'); # translation needed
 tz_def('START_TIME_TRADE', 'Oră de start');
 tz_def('CREATE_TRADE_ROUTE', 'Creează rută comercială');
 tz_def('TARGET_VILLAGE', 'Sat țintă');

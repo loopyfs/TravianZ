@@ -1139,6 +1139,7 @@ tz_def('EDIT', 'Éditer');
 tz_def('EXTEND_TRADE_ROUTES', 'Prolonger la route commerciale de <b>7</b> jours pour');
 tz_def('CREATE_TRADE_ROUTES', 'Créer une nouvelle route commerciale');
 tz_def('DELIVERIES', 'Livraisons');
+tz_def("Hourly","Hourly"); # translation needed
 tz_def('START_TIME_TRADE', 'Heure de départ');
 tz_def('CREATE_TRADE_ROUTE', 'Créer une route commerciale');
 tz_def('TARGET_VILLAGE', 'Village cible');
