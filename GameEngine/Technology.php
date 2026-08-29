@@ -624,7 +624,7 @@ class Technology {
 	    if ($unit % 10 !== 1 && !$database->checkIfResearched($vref, $unit, false)) return 0;
 	    if ($database->getFieldLevelInVillage($vref, $buildingType, false) <= 0) return 0;
 
-	    $data = $GLOBALS['u'.$unit'];
+	    $data = $GLOBALS['u'.$unit];
 	    $multiplier = $great ? 3 : 1;
 	    $amount = $requested;
 	    $availableResources = [
